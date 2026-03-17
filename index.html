@@ -58,8 +58,6 @@
                         <div class="dropdown-menu" id="blend-menu">
                             <div class="dropdown-option selected" data-value="screen">Screen (Vibrant Glow)</div>
                             <div class="dropdown-option" data-value="source-over">Normal (Smooth Overlap)</div>
-                            <div class="dropdown-option" data-value="overlay">Overlay (High Contrast)</div>
-                            <div class="dropdown-option" data-value="color-dodge">Color Dodge (Intense)</div>
                         </div>
                     </div>
                 </div>
@@ -94,29 +92,62 @@
                     </div>
                     <input type="range" id="speed" min="0" max="3" step="0.1" value="1.0">
                 </div>
+
+                <!-- Gradient Size -->
+                <div class="control">
+                    <div class="control-head">
+                        <label>Gradient Size</label>
+                        <span id="spread-val">120%</span>
+                    </div>
+                    <input type="range" id="spread" min="0.3" max="2.5" step="0.05" value="1.2">
+                </div>
+
+                <!-- Dither Texture -->
+                <div class="control">
+                    <div class="control-head">
+                        <label>Dither Texture</label>
+                        <span id="grain-val">Off</span>
+                    </div>
+                    <input type="range" id="grain" min="0" max="0.25" step="0.01" value="0">
+                </div>
+
+                <!-- Motion Range -->
+                <div class="control" id="motion-control">
+                    <div class="control-head">
+                        <label>Motion Range</label>
+                        <span id="motion-val">100%</span>
+                    </div>
+                    <input type="range" id="motion" min="0.1" max="2.0" step="0.05" value="1.0">
+                </div>
             </div>
 
             <!-- Export Footer -->
             <div class="footer">
-                <div class="export-row">
-                    <button class="btn btn-secondary" id="btn-export-img">
-                        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"
-                            stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                            <polyline points="7 10 12 15 17 10"></polyline>
-                            <line x1="12" y1="15" x2="12" y2="3"></line>
-                        </svg>
-                        PNG
-                    </button>
-                    <button class="btn btn-primary" id="btn-export-vid">
-                        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"
-                            stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                            <polygon points="23 7 16 12 23 17 23 7"></polygon>
-                            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
-                        </svg>
-                        WebM
-                    </button>
+                <div class="control">
+                    <label>Export Format</label>
+                    <div class="custom-dropdown" id="format-dropdown">
+                        <div class="dropdown-trigger" id="format-trigger">
+                            <span>PNG Image</span>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </div>
+                        <div class="dropdown-menu" id="format-menu">
+                            <div class="dropdown-option selected" data-value="png">PNG Image</div>
+                            <div class="dropdown-option" data-value="webm">WebM Video</div>
+                        </div>
+                    </div>
                 </div>
+                <button class="btn btn-primary" id="btn-export">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Download
+                </button>
             </div>
         </aside>
 

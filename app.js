@@ -16,6 +16,7 @@ const appState = {
     speed: 1.0,
     spread: 1.2,
     grain: 0,
+    motion: 1.0,
     colors: ['#ff0080', '#7928ca', '#ff4d4d', '#f9cb28', '#00dfd8'],
     nodesData: []
 };
@@ -74,19 +75,20 @@ class GradientNode {
     update(speed) {
         if (appState.playback === 'still') return;
 
+        const m = appState.motion;
         if (appState.renderMode === 'fluid') {
-            this.x += this.vx * speed;
-            this.y += this.vy * speed;
+            this.x += this.vx * speed * m;
+            this.y += this.vy * speed * m;
             if (this.x < -0.15 || this.x > 1.15) this.vx *= -1;
             if (this.y < -0.15 || this.y > 1.15) this.vy *= -1;
         } else if (appState.renderMode === 'orbit') {
-            this.angle += 0.005 * speed;
-            this.x = 0.5 + Math.cos(this.angle + this.index * ((Math.PI * 2) / appState.colors.length)) * 0.32;
-            this.y = 0.5 + Math.sin(this.angle + this.index * ((Math.PI * 2) / appState.colors.length)) * 0.32;
+            this.angle += 0.005 * speed * m;
+            this.x = 0.5 + Math.cos(this.angle + this.index * ((Math.PI * 2) / appState.colors.length)) * 0.32 * m;
+            this.y = 0.5 + Math.sin(this.angle + this.index * ((Math.PI * 2) / appState.colors.length)) * 0.32 * m;
         } else if (appState.renderMode === 'aurora') {
-            this.x += Math.abs(this.vx) * speed * 0.5;
+            this.x += Math.abs(this.vx) * speed * 0.5 * m;
             if (this.x > 1.2) this.x = -0.2;
-            this.y = 0.5 + Math.sin(Date.now() * 0.001 * speed + this.index) * 0.3;
+            this.y = 0.5 + Math.sin(Date.now() * 0.001 * speed + this.index) * 0.3 * m;
         }
     }
 }
@@ -332,6 +334,8 @@ document.querySelectorAll('#playback-tabs button').forEach(btn => {
         showHandles(isStill);
         document.getElementById('speed-control').style.opacity = isStill ? '0.3' : '1';
         document.getElementById('speed-control').style.pointerEvents = isStill ? 'none' : 'auto';
+        document.getElementById('motion-control').style.opacity = isStill ? '0.3' : '1';
+        document.getElementById('motion-control').style.pointerEvents = isStill ? 'none' : 'auto';
         modeBadge.textContent = isStill ? 'Static' : 'Video';
         modeBadge.classList.toggle('live', !isStill);
 
@@ -344,18 +348,52 @@ initDropdown('blend-trigger', 'blend-menu', (val) => {
     appState.blend = val;
 });
 
+// Format Dropdown
+let exportFormat = 'png';
+initDropdown('format-trigger', 'format-menu', (val) => {
+    exportFormat = val;
+});
+
 // Speed Slider
 document.getElementById('speed').addEventListener('input', e => {
     appState.speed = parseFloat(e.target.value);
     document.getElementById('speed-val').innerText = appState.speed.toFixed(1) + 'x';
 });
 
+// Gradient Size Slider
+document.getElementById('spread').addEventListener('input', e => {
+    appState.spread = parseFloat(e.target.value);
+    document.getElementById('spread-val').innerText = Math.round(appState.spread * 100) + '%';
+});
+
+// Dither Texture Slider
+document.getElementById('grain').addEventListener('input', e => {
+    appState.grain = parseFloat(e.target.value);
+    document.getElementById('grain-val').innerText = appState.grain === 0 ? 'Off' : Math.round(appState.grain * 400) + '%';
+});
+
+// Motion Range Slider
+document.getElementById('motion').addEventListener('input', e => {
+    appState.motion = parseFloat(e.target.value);
+    document.getElementById('motion-val').innerText = Math.round(appState.motion * 100) + '%';
+});
+
 // ========================================
-// Export — Image (High Res PNG)
+// Unified Export (Download Button)
 // ========================================
 
-document.getElementById('btn-export-img').addEventListener('click', () => {
-    const scale = 4; // Always export 4x for quality
+let isRecording = false;
+
+document.getElementById('btn-export').addEventListener('click', () => {
+    if (exportFormat === 'png') {
+        exportPNG();
+    } else {
+        exportWebM();
+    }
+});
+
+function exportPNG() {
+    const scale = 4;
     const expCanvas = document.createElement('canvas');
     expCanvas.width = 640 * scale;
     expCanvas.height = 480 * scale;
@@ -367,19 +405,13 @@ document.getElementById('btn-export-img').addEventListener('click', () => {
     link.download = `AuraMesh-${Date.now()}.png`;
     link.href = expCanvas.toDataURL('image/png', 1.0);
     link.click();
-});
+}
 
-// ========================================
-// Export — Video (High Quality WebM)
-// ========================================
-
-let isRecording = false;
-document.getElementById('btn-export-vid').addEventListener('click', () => {
+function exportWebM() {
     if (isRecording) return;
     const duration = 6;
     isRecording = true;
 
-    // Force video mode during recording
     const prevPlayback = appState.playback;
     appState.playback = 'video';
     showHandles(false);
@@ -388,18 +420,14 @@ document.getElementById('btn-export-vid').addEventListener('click', () => {
     const timeDisplay = document.getElementById('rec-time');
     overlay.classList.add('active');
 
-    // Use high-quality canvas stream
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const recCanvas = document.createElement('canvas');
     recCanvas.width = 640 * dpr;
     recCanvas.height = 480 * dpr;
     const recCtx = recCanvas.getContext('2d');
 
-    // Record at 60fps from a high-res offscreen canvas
     const stream = recCanvas.captureStream(60);
 
-    let recorder;
-    // Try VP9 first for best quality, then VP8 fallback
     const mimeTypes = [
         'video/webm; codecs=vp9',
         'video/webm; codecs=vp8',
@@ -414,9 +442,9 @@ document.getElementById('btn-export-vid').addEventListener('click', () => {
         }
     }
 
-    recorder = new MediaRecorder(stream, {
+    const recorder = new MediaRecorder(stream, {
         mimeType: chosenMime,
-        videoBitsPerSecond: 12_000_000 // 12 Mbps for crispy quality
+        videoBitsPerSecond: 12_000_000
     });
 
     const chunks = [];
@@ -439,7 +467,6 @@ document.getElementById('btn-export-vid').addEventListener('click', () => {
         }
     };
 
-    // Render loop for recording canvas
     let recAnimId;
     function recLoop() {
         appState.nodesData.forEach(n => n.update(appState.speed));
@@ -461,7 +488,7 @@ document.getElementById('btn-export-vid').addEventListener('click', () => {
             recorder.stop();
         }
     }, 1000);
-});
+}
 
 // ========================================
 // Init
