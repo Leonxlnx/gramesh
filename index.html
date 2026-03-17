@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AuraMesh Pro | Gradient Studio</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="app">
+        <!-- ═══ SIDEBAR — Controls ═══ -->
+        <aside class="sidebar">
+            <div class="header">
+                <div class="logo-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path>
+                        <path d="M2 12h20"></path>
+                    </svg>
+                </div>
+                <h1>AuraMesh Pro</h1>
+            </div>
+
+            <div class="content">
+                <!-- Render Mode -->
+                <div class="control">
+                    <label>Render Mode</label>
+                    <div class="segmented">
+                        <button class="active" data-mode="fluid">Fluid</button>
+                        <button data-mode="orbit">Orbit</button>
+                        <button data-mode="aurora">Aurora</button>
+                    </div>
+                </div>
+
+                <!-- Blend Mode -->
+                <div class="control">
+                    <label>Blend Mode</label>
+                    <select id="blend">
+                        <option value="screen" selected>Screen (Vibrant Glow)</option>
+                        <option value="source-over">Normal (Smooth Overlap)</option>
+                        <option value="overlay">Overlay (High Contrast)</option>
+                        <option value="color-dodge">Color Dodge (Intense)</option>
+                    </select>
+                </div>
+
+                <!-- Color Palette -->
+                <div class="control">
+                    <div class="control-head">
+                        <label>Color Palette</label>
+                        <button id="btn-random" class="icon-btn" title="Randomize Palette">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <polyline points="16 3 21 3 21 8"></polyline>
+                                <line x1="4" y1="20" x2="21" y2="3"></line>
+                                <polyline points="21 16 21 21 16 21"></polyline>
+                                <line x1="15" y1="15" x2="21" y2="21"></line>
+                                <line x1="4" y1="4" x2="9" y2="9"></line>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="color-grid" id="colors"></div>
+                    <div class="color-actions">
+                        <button id="btn-add">Add Color</button>
+                        <button id="btn-remove">Remove</button>
+                    </div>
+                </div>
+
+                <!-- Animation Speed -->
+                <div class="control">
+                    <div class="control-head">
+                        <label>Animation Speed</label>
+                        <span id="speed-val">1.0x</span>
+                    </div>
+                    <input type="range" id="speed" min="0" max="3" step="0.1" value="1.0">
+                </div>
+
+                <!-- Mesh Spread -->
+                <div class="control">
+                    <div class="control-head">
+                        <label>Mesh Spread Focus</label>
+                        <span id="spread-val">1.2x</span>
+                    </div>
+                    <input type="range" id="spread" min="0.5" max="2.5" step="0.1" value="1.2">
+                </div>
+
+                <!-- Film Grain -->
+                <div class="control">
+                    <div class="control-head">
+                        <label>Film Grain Texture</label>
+                        <span id="grain-val">15%</span>
+                    </div>
+                    <input type="range" id="grain" min="0" max="0.5" step="0.01" value="0.15">
+                </div>
+            </div>
+
+            <!-- ═══ EXPORT FOOTER ═══ -->
+            <div class="footer">
+                <div class="export-grid">
+                    <div class="control-half">
+                        <label>Scale (Img)</label>
+                        <select id="img-scale">
+                            <option value="1">1x (Normal)</option>
+                            <option value="2" selected>2x (High Res)</option>
+                            <option value="4">4x (Ultra HD)</option>
+                        </select>
+                    </div>
+                    <div class="control-half">
+                        <label>Duration (Vid)</label>
+                        <div class="input-with-suffix">
+                            <input type="number" id="vid-duration" value="5" min="1" max="60">
+                            <span>sec</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn btn-secondary" id="btn-export-img">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Export Image (PNG)
+                </button>
+                <button class="btn btn-primary" id="btn-export-vid">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                        <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                        <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                    </svg>
+                    Export Video (WebM)
+                </button>
+            </div>
+        </aside>
+
+        <!-- ═══ PREVIEW — Fixed Canvas (Right Side) ═══ -->
+        <main class="preview">
+            <div class="canvas-wrapper">
+                <canvas id="canvas"></canvas>
+                <div id="rec-overlay" class="rec-overlay">
+                    <div class="spinner"></div>
+                    <span style="font-weight: 500; letter-spacing: 0.05em;">Recording Frame Data...
+                        <span id="rec-time">0</span>s</span>
+                </div>
+                <div class="size-badge">640 × 480</div>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
