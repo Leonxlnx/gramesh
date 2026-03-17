@@ -332,7 +332,7 @@ document.querySelectorAll('#playback-tabs button').forEach(btn => {
         showHandles(isStill);
         document.getElementById('speed-control').style.opacity = isStill ? '0.3' : '1';
         document.getElementById('speed-control').style.pointerEvents = isStill ? 'none' : 'auto';
-        modeBadge.textContent = isStill ? 'Still' : 'Video';
+        modeBadge.textContent = isStill ? 'Static' : 'Video';
         modeBadge.classList.toggle('live', !isStill);
 
         if (isStill) createNodeHandles();
