@@ -1,17 +1,21 @@
 // ========================================
-// AuraMesh Pro — Core Application Logic
+// AuraMesh Pro — Core Engine
 // ========================================
 
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d', { alpha: false });
+const wrapper = document.getElementById('canvas-wrapper');
+const handlesContainer = document.getElementById('node-handles');
+const modeBadge = document.getElementById('mode-badge');
 
-// --- Application State ---
+// --- State ---
 const appState = {
-    mode: 'fluid',
+    renderMode: 'fluid',
+    playback: 'video',    // 'video' | 'still'
     blend: 'screen',
     speed: 1.0,
     spread: 1.2,
-    grain: 0.15,
+    grain: 0,
     colors: ['#ff0080', '#7928ca', '#ff4d4d', '#f9cb28', '#00dfd8'],
     nodesData: []
 };
@@ -36,7 +40,7 @@ function hexToRgb(hex) {
 }
 
 // ========================================
-// Film Grain Pre-Renderer
+// Film Grain (disabled by default but kept for engine)
 // ========================================
 
 const noiseCanvas = document.createElement('canvas');
@@ -57,29 +61,29 @@ nCtx.putImageData(imgData, 0, 0);
 // Node Engine
 // ========================================
 
-class Node {
-    constructor(i, total) {
+class GradientNode {
+    constructor(i) {
         this.index = i;
-        this.x = Math.random();
-        this.y = Math.random();
-        this.vx = (Math.random() - 0.5) * 0.005;
-        this.vy = (Math.random() - 0.5) * 0.005;
+        this.x = 0.15 + Math.random() * 0.7;
+        this.y = 0.15 + Math.random() * 0.7;
+        this.vx = (Math.random() - 0.5) * 0.004;
+        this.vy = (Math.random() - 0.5) * 0.004;
         this.angle = Math.random() * Math.PI * 2;
     }
 
     update(speed) {
-        if (appState.mode === 'fluid') {
+        if (appState.playback === 'still') return;
+
+        if (appState.renderMode === 'fluid') {
             this.x += this.vx * speed;
             this.y += this.vy * speed;
-            if (this.x < -0.2) this.vx *= -1;
-            if (this.x > 1.2) this.vx *= -1;
-            if (this.y < -0.2) this.vy *= -1;
-            if (this.y > 1.2) this.vy *= -1;
-        } else if (appState.mode === 'orbit') {
+            if (this.x < -0.15 || this.x > 1.15) this.vx *= -1;
+            if (this.y < -0.15 || this.y > 1.15) this.vy *= -1;
+        } else if (appState.renderMode === 'orbit') {
             this.angle += 0.005 * speed;
-            this.x = 0.5 + Math.cos(this.angle) * 0.35;
-            this.y = 0.5 + Math.sin(this.angle) * 0.35;
-        } else if (appState.mode === 'aurora') {
+            this.x = 0.5 + Math.cos(this.angle + this.index * ((Math.PI * 2) / appState.colors.length)) * 0.32;
+            this.y = 0.5 + Math.sin(this.angle + this.index * ((Math.PI * 2) / appState.colors.length)) * 0.32;
+        } else if (appState.renderMode === 'aurora') {
             this.x += Math.abs(this.vx) * speed * 0.5;
             if (this.x > 1.2) this.x = -0.2;
             this.y = 0.5 + Math.sin(Date.now() * 0.001 * speed + this.index) * 0.3;
@@ -89,7 +93,7 @@ class Node {
 
 function syncNodes() {
     while (appState.nodesData.length < appState.colors.length) {
-        appState.nodesData.push(new Node(appState.nodesData.length, appState.colors.length));
+        appState.nodesData.push(new GradientNode(appState.nodesData.length));
     }
     while (appState.nodesData.length > appState.colors.length) {
         appState.nodesData.pop();
@@ -103,7 +107,6 @@ function syncNodes() {
 function drawFrame(ctxTarget, w, h) {
     ctxTarget.fillStyle = '#050505';
     ctxTarget.fillRect(0, 0, w, h);
-
     ctxTarget.globalCompositeOperation = appState.blend;
 
     appState.nodesData.forEach((node, i) => {
@@ -121,7 +124,7 @@ function drawFrame(ctxTarget, w, h) {
         ctxTarget.fillStyle = grad;
         ctxTarget.beginPath();
 
-        if (appState.mode === 'aurora') {
+        if (appState.renderMode === 'aurora') {
             ctxTarget.save();
             ctxTarget.translate(cx, cy);
             ctxTarget.scale(1.5, 0.5);
@@ -136,7 +139,6 @@ function drawFrame(ctxTarget, w, h) {
 
     ctxTarget.globalCompositeOperation = 'source-over';
 
-    // Film grain overlay
     if (appState.grain > 0) {
         const pattern = ctxTarget.createPattern(noiseCanvas, 'repeat');
         ctxTarget.globalAlpha = appState.grain;
@@ -151,20 +153,112 @@ function drawFrame(ctxTarget, w, h) {
 function loop() {
     appState.nodesData.forEach(n => n.update(appState.speed));
     drawFrame(ctx, canvas.width, canvas.height);
+    if (appState.playback === 'still') updateNodeHandles();
     requestAnimationFrame(loop);
 }
 
 // ========================================
-// Canvas Sizing (Fixed 640×480 @ DPR)
+// Canvas Sizing
 // ========================================
 
 function resizeCanvas() {
-    const wrapper = document.querySelector('.canvas-wrapper');
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = wrapper.clientWidth * dpr;
     canvas.height = wrapper.clientHeight * dpr;
 }
 window.addEventListener('resize', resizeCanvas);
+
+// ========================================
+// Node Handles (Still Mode — Draggable)
+// ========================================
+
+let dragNode = null;
+
+function createNodeHandles() {
+    handlesContainer.innerHTML = '';
+    appState.nodesData.forEach((node, i) => {
+        const handle = document.createElement('div');
+        handle.className = 'node-handle';
+        handle.style.background = appState.colors[i] || '#fff';
+        handle.dataset.index = i;
+
+        handle.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            dragNode = i;
+        });
+
+        handlesContainer.appendChild(handle);
+    });
+    updateNodeHandles();
+}
+
+function updateNodeHandles() {
+    const handles = handlesContainer.querySelectorAll('.node-handle');
+    const rect = wrapper.getBoundingClientRect();
+    handles.forEach((handle, i) => {
+        if (appState.nodesData[i]) {
+            handle.style.left = (appState.nodesData[i].x * rect.width) + 'px';
+            handle.style.top = (appState.nodesData[i].y * rect.height) + 'px';
+            handle.style.background = appState.colors[i] || '#fff';
+        }
+    });
+}
+
+function showHandles(show) {
+    handlesContainer.style.display = show ? 'block' : 'none';
+    wrapper.classList.toggle('draggable', show);
+}
+
+document.addEventListener('mousemove', (e) => {
+    if (dragNode === null) return;
+    const rect = wrapper.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    appState.nodesData[dragNode].x = Math.max(0, Math.min(1, x));
+    appState.nodesData[dragNode].y = Math.max(0, Math.min(1, y));
+});
+
+document.addEventListener('mouseup', () => {
+    dragNode = null;
+});
+
+// ========================================
+// Custom Dropdown
+// ========================================
+
+function initDropdown(triggerId, menuId, onSelect) {
+    const trigger = document.getElementById(triggerId);
+    const menu = document.getElementById(menuId);
+    const options = menu.querySelectorAll('.dropdown-option');
+
+    trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = menu.classList.contains('open');
+        closeAllDropdowns();
+        if (!isOpen) {
+            menu.classList.add('open');
+            trigger.classList.add('open');
+        }
+    });
+
+    options.forEach(opt => {
+        opt.addEventListener('click', () => {
+            options.forEach(o => o.classList.remove('selected'));
+            opt.classList.add('selected');
+            trigger.querySelector('span').textContent = opt.textContent;
+            menu.classList.remove('open');
+            trigger.classList.remove('open');
+            onSelect(opt.dataset.value);
+        });
+    });
+}
+
+function closeAllDropdowns() {
+    document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('open'));
+    document.querySelectorAll('.dropdown-trigger').forEach(t => t.classList.remove('open'));
+}
+
+document.addEventListener('click', closeAllDropdowns);
 
 // ========================================
 // UI Interactions
@@ -194,9 +288,10 @@ function renderColors() {
     document.getElementById('btn-add').disabled = appState.colors.length >= 10;
     document.getElementById('btn-remove').disabled = appState.colors.length <= 2;
     syncNodes();
+    if (appState.playback === 'still') createNodeHandles();
 }
 
-// Add / Remove colors
+// Add / Remove
 document.getElementById('btn-add').addEventListener('click', () => {
     if (appState.colors.length < 10) {
         appState.colors.push('#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0'));
@@ -211,55 +306,59 @@ document.getElementById('btn-remove').addEventListener('click', () => {
     }
 });
 
-// Randomize palette
+// Randomize
 document.getElementById('btn-random').addEventListener('click', () => {
-    const randomPalette = palettes[Math.floor(Math.random() * palettes.length)];
-    appState.colors = [...randomPalette];
+    appState.colors = [...palettes[Math.floor(Math.random() * palettes.length)]];
     renderColors();
 });
 
-// Mode tabs
-document.querySelectorAll('.segmented button').forEach(btn => {
+// Render Mode Tabs
+document.querySelectorAll('#mode-tabs button').forEach(btn => {
     btn.addEventListener('click', e => {
-        document.querySelectorAll('.segmented button').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('#mode-tabs button').forEach(b => b.classList.remove('active'));
         e.target.classList.add('active');
-        appState.mode = e.target.dataset.mode;
+        appState.renderMode = e.target.dataset.mode;
     });
 });
 
-// Blend mode
-document.getElementById('blend').addEventListener('change', e => {
-    appState.blend = e.target.value;
+// Playback Toggle (Video / Still)
+document.querySelectorAll('#playback-tabs button').forEach(btn => {
+    btn.addEventListener('click', e => {
+        document.querySelectorAll('#playback-tabs button').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        appState.playback = e.target.dataset.playback;
+
+        const isStill = appState.playback === 'still';
+        showHandles(isStill);
+        document.getElementById('speed-control').style.opacity = isStill ? '0.3' : '1';
+        document.getElementById('speed-control').style.pointerEvents = isStill ? 'none' : 'auto';
+        modeBadge.textContent = isStill ? 'Still' : 'Video';
+        modeBadge.classList.toggle('live', !isStill);
+
+        if (isStill) createNodeHandles();
+    });
 });
 
-// Sliders
+// Blend Mode (Custom Dropdown)
+initDropdown('blend-trigger', 'blend-menu', (val) => {
+    appState.blend = val;
+});
+
+// Speed Slider
 document.getElementById('speed').addEventListener('input', e => {
     appState.speed = parseFloat(e.target.value);
     document.getElementById('speed-val').innerText = appState.speed.toFixed(1) + 'x';
 });
 
-document.getElementById('spread').addEventListener('input', e => {
-    appState.spread = parseFloat(e.target.value);
-    document.getElementById('spread-val').innerText = appState.spread.toFixed(1) + 'x';
-});
-
-document.getElementById('grain').addEventListener('input', e => {
-    appState.grain = parseFloat(e.target.value);
-    document.getElementById('grain-val').innerText = (appState.grain * 100).toFixed(0) + '%';
-});
-
 // ========================================
-// Export Logic
+// Export — Image (High Res PNG)
 // ========================================
 
-// Image Export
 document.getElementById('btn-export-img').addEventListener('click', () => {
-    const scale = parseInt(document.getElementById('img-scale').value);
-    const rect = canvas.getBoundingClientRect();
-
+    const scale = 4; // Always export 4x for quality
     const expCanvas = document.createElement('canvas');
-    expCanvas.width = rect.width * scale;
-    expCanvas.height = rect.height * scale;
+    expCanvas.width = 640 * scale;
+    expCanvas.height = 480 * scale;
     const expCtx = expCanvas.getContext('2d');
 
     drawFrame(expCtx, expCanvas.width, expCanvas.height);
@@ -270,40 +369,84 @@ document.getElementById('btn-export-img').addEventListener('click', () => {
     link.click();
 });
 
-// Video Export (WebM 60FPS)
+// ========================================
+// Export — Video (High Quality WebM)
+// ========================================
+
 let isRecording = false;
 document.getElementById('btn-export-vid').addEventListener('click', () => {
     if (isRecording) return;
-    const duration = parseInt(document.getElementById('vid-duration').value) || 5;
+    const duration = 6;
     isRecording = true;
+
+    // Force video mode during recording
+    const prevPlayback = appState.playback;
+    appState.playback = 'video';
+    showHandles(false);
 
     const overlay = document.getElementById('rec-overlay');
     const timeDisplay = document.getElementById('rec-time');
     overlay.classList.add('active');
 
-    const stream = canvas.captureStream(60);
-    const options = { mimeType: 'video/webm; codecs=vp9' };
+    // Use high-quality canvas stream
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const recCanvas = document.createElement('canvas');
+    recCanvas.width = 640 * dpr;
+    recCanvas.height = 480 * dpr;
+    const recCtx = recCanvas.getContext('2d');
+
+    // Record at 60fps from a high-res offscreen canvas
+    const stream = recCanvas.captureStream(60);
+
     let recorder;
-    try {
-        recorder = new MediaRecorder(stream, options);
-    } catch (e) {
-        recorder = new MediaRecorder(stream);
+    // Try VP9 first for best quality, then VP8 fallback
+    const mimeTypes = [
+        'video/webm; codecs=vp9',
+        'video/webm; codecs=vp8',
+        'video/webm'
+    ];
+
+    let chosenMime = 'video/webm';
+    for (const mime of mimeTypes) {
+        if (MediaRecorder.isTypeSupported(mime)) {
+            chosenMime = mime;
+            break;
+        }
     }
+
+    recorder = new MediaRecorder(stream, {
+        mimeType: chosenMime,
+        videoBitsPerSecond: 12_000_000 // 12 Mbps for crispy quality
+    });
 
     const chunks = [];
     recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
     recorder.onstop = () => {
-        const blob = new Blob(chunks, { type: 'video/webm' });
+        const blob = new Blob(chunks, { type: chosenMime });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `AuraMesh-Video-${Date.now()}.webm`;
+        a.download = `AuraMesh-${Date.now()}.webm`;
         a.click();
         URL.revokeObjectURL(url);
 
         isRecording = false;
         overlay.classList.remove('active');
+        appState.playback = prevPlayback;
+        if (prevPlayback === 'still') {
+            showHandles(true);
+            createNodeHandles();
+        }
     };
+
+    // Render loop for recording canvas
+    let recAnimId;
+    function recLoop() {
+        appState.nodesData.forEach(n => n.update(appState.speed));
+        drawFrame(recCtx, recCanvas.width, recCanvas.height);
+        recAnimId = requestAnimationFrame(recLoop);
+    }
+    recLoop();
 
     recorder.start();
 
@@ -314,6 +457,7 @@ document.getElementById('btn-export-vid').addEventListener('click', () => {
         timeDisplay.innerText = elapsed;
         if (elapsed >= duration) {
             clearInterval(interval);
+            cancelAnimationFrame(recAnimId);
             recorder.stop();
         }
     }, 1000);
@@ -325,4 +469,6 @@ document.getElementById('btn-export-vid').addEventListener('click', () => {
 
 resizeCanvas();
 renderColors();
+showHandles(false);
+modeBadge.classList.add('live');
 loop();

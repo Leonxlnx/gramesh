@@ -11,7 +11,6 @@
 
 <body>
     <div class="app">
-        <!-- ═══ SIDEBAR — Controls ═══ -->
         <aside class="sidebar">
             <div class="header">
                 <div class="logo-icon">
@@ -26,25 +25,43 @@
             </div>
 
             <div class="content">
+                <!-- Playback Mode -->
+                <div class="control">
+                    <label>Playback</label>
+                    <div class="segmented" id="playback-tabs">
+                        <button class="active" data-playback="video">Video</button>
+                        <button data-playback="still">Still</button>
+                    </div>
+                </div>
+
                 <!-- Render Mode -->
                 <div class="control">
                     <label>Render Mode</label>
-                    <div class="segmented">
+                    <div class="segmented" id="mode-tabs">
                         <button class="active" data-mode="fluid">Fluid</button>
                         <button data-mode="orbit">Orbit</button>
                         <button data-mode="aurora">Aurora</button>
                     </div>
                 </div>
 
-                <!-- Blend Mode -->
+                <!-- Blend Mode (Custom Dropdown) -->
                 <div class="control">
                     <label>Blend Mode</label>
-                    <select id="blend">
-                        <option value="screen" selected>Screen (Vibrant Glow)</option>
-                        <option value="source-over">Normal (Smooth Overlap)</option>
-                        <option value="overlay">Overlay (High Contrast)</option>
-                        <option value="color-dodge">Color Dodge (Intense)</option>
-                    </select>
+                    <div class="custom-dropdown" id="blend-dropdown">
+                        <div class="dropdown-trigger" id="blend-trigger">
+                            <span>Screen (Vibrant Glow)</span>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </div>
+                        <div class="dropdown-menu" id="blend-menu">
+                            <div class="dropdown-option selected" data-value="screen">Screen (Vibrant Glow)</div>
+                            <div class="dropdown-option" data-value="source-over">Normal (Smooth Overlap)</div>
+                            <div class="dropdown-option" data-value="overlay">Overlay (High Contrast)</div>
+                            <div class="dropdown-option" data-value="color-dodge">Color Dodge (Intense)</div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Color Palette -->
@@ -70,82 +87,50 @@
                 </div>
 
                 <!-- Animation Speed -->
-                <div class="control">
+                <div class="control" id="speed-control">
                     <div class="control-head">
                         <label>Animation Speed</label>
                         <span id="speed-val">1.0x</span>
                     </div>
                     <input type="range" id="speed" min="0" max="3" step="0.1" value="1.0">
                 </div>
-
-                <!-- Mesh Spread -->
-                <div class="control">
-                    <div class="control-head">
-                        <label>Mesh Spread Focus</label>
-                        <span id="spread-val">1.2x</span>
-                    </div>
-                    <input type="range" id="spread" min="0.5" max="2.5" step="0.1" value="1.2">
-                </div>
-
-                <!-- Film Grain -->
-                <div class="control">
-                    <div class="control-head">
-                        <label>Film Grain Texture</label>
-                        <span id="grain-val">15%</span>
-                    </div>
-                    <input type="range" id="grain" min="0" max="0.5" step="0.01" value="0.15">
-                </div>
             </div>
 
-            <!-- ═══ EXPORT FOOTER ═══ -->
+            <!-- Export Footer -->
             <div class="footer">
-                <div class="export-grid">
-                    <div class="control-half">
-                        <label>Scale (Img)</label>
-                        <select id="img-scale">
-                            <option value="1">1x (Normal)</option>
-                            <option value="2" selected>2x (High Res)</option>
-                            <option value="4">4x (Ultra HD)</option>
-                        </select>
-                    </div>
-                    <div class="control-half">
-                        <label>Duration (Vid)</label>
-                        <div class="input-with-suffix">
-                            <input type="number" id="vid-duration" value="5" min="1" max="60">
-                            <span>sec</span>
-                        </div>
-                    </div>
+                <div class="export-row">
+                    <button class="btn btn-secondary" id="btn-export-img">
+                        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        PNG
+                    </button>
+                    <button class="btn btn-primary" id="btn-export-vid">
+                        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                            <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                        </svg>
+                        WebM
+                    </button>
                 </div>
-
-                <button class="btn btn-secondary" id="btn-export-img">
-                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"
-                        stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                        <polyline points="7 10 12 15 17 10"></polyline>
-                        <line x1="12" y1="15" x2="12" y2="3"></line>
-                    </svg>
-                    Export Image (PNG)
-                </button>
-                <button class="btn btn-primary" id="btn-export-vid">
-                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"
-                        stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                        <polygon points="23 7 16 12 23 17 23 7"></polygon>
-                        <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
-                    </svg>
-                    Export Video (WebM)
-                </button>
             </div>
         </aside>
 
-        <!-- ═══ PREVIEW — Fixed Canvas (Right Side) ═══ -->
+        <!-- Preview -->
         <main class="preview">
-            <div class="canvas-wrapper">
+            <div class="canvas-wrapper" id="canvas-wrapper">
                 <canvas id="canvas"></canvas>
+                <div id="node-handles"></div>
                 <div id="rec-overlay" class="rec-overlay">
                     <div class="spinner"></div>
-                    <span style="font-weight: 500; letter-spacing: 0.05em;">Recording Frame Data...
+                    <span style="font-weight:500;letter-spacing:0.05em;">Recording...
                         <span id="rec-time">0</span>s</span>
                 </div>
+                <div class="mode-badge" id="mode-badge">Video</div>
                 <div class="size-badge">640 × 480</div>
             </div>
         </main>
